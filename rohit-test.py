@@ -40,9 +40,6 @@ def get_notes():
      pickle.dump(notes, filepath)
     return notes
 
-notes=get_notes()
-print(notes)
-
 
 def prepare_sequences(notes, n_vocab):
     sequence_length = 100
@@ -127,13 +124,12 @@ def train_network():
 
     model = create_network(network_in, n_vocab)
     print('Model created')
-    return model
     print('Training in progress')
     train(model, network_in, network_out, epochs)
     print('Training completed')
+    return model
 
-train_network()
-
+model= train_network()
 
 def generate():
     """ Generate a piano midi file """
@@ -189,7 +185,7 @@ def generate_notes(model, network_input, pitchnames, n_vocab):
     for note_index in range(500):
         prediction_input = np.reshape(pattern, (1, len(pattern), 1))
         prediction_input = prediction_input / float(n_vocab)
-
+        prediction_input = np.asarray(prediction_input).astype('float32')
         prediction = model.predict(prediction_input, verbose=0)
 
         # Predicted output is the argmax(P(h|D))
