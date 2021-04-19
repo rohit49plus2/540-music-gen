@@ -112,7 +112,7 @@ def train(models, network_inputs, network_outputs, epochs):
         network_input=network_inputs[j]
         network_output=network_outputs[j]
         # Create checkpoint to save the best model weights.
-        filepath = 'data/weights.best.music'+str(j)+'.hdf5'
+        filepath = 'data/weights-GAN/weights.best.music'+str(j)+'.hdf5'
         checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=0, save_best_only=True)
 
         models[j].fit(network_input, network_output, epochs=epochs, batch_size=32, callbacks=[checkpoint])
@@ -141,6 +141,7 @@ def train_network(network_inputs, network_outputs):
     return models
 
 training = True
+# training = False
 you_have_processed_notes = True
 def generate():
     """ Generate a piano midi file """
@@ -168,10 +169,10 @@ def generate():
         models= train_network(network_inputs, network_outputs)
         pass
     else:
-        models = create_network(n_vocab)
+        models = create_network(network_inputs,n_vocab)
         print('Loading Model weights.....')
         for j in range(sequence_length):
-            models[j].load_weights('data/weights.best.music'+str(j)+'.hdf5')
+            models[j].load_weights('data/weights-GAN/weights.best.music'+str(j)+'.hdf5')
         print('Model Loaded')
     print("Creating Output")
     prediction_output = generate_notes(models, network_inputs, pitchnames, n_vocab)
@@ -185,28 +186,25 @@ def generate_notes(models, network_inputs, pitchnames, n_vocab):
     """ Generate notes from the neural network based on a sequence of notes """
     int_to_note = dict((number, note) for number, note in enumerate(pitchnames))
 
-
-    patterns=[]
+    start_seq = 0
+    pattern=[]
     # pick a random sequence from the input as a starting point for the prediction
-    for j in range(sequence_length):
-        network_input=network_inputs[j]
-        # Pick a random integer
-        start = np.random.randint(0, len(network_input)-1)
-        pattern = list(network_input[start])
-        patterns.append(pattern)
+    network_input=network_inputs[start_seq]*float(n_vocab)
+    # Pick a random integer
+    start = np.random.randint(0, len(network_input)-1)
+    pattern = network_input[start].tolist()
     prediction_output = []
 
     print('Generating notes........')
 
-    # generate 500 notes
-    for note_index in range(500):
-        prediction = np.reshape(np.zeros(n_vocab), (1,n_vocab))
-        for j in range(sequence_length):
-            model = models[j]
-            pattern = patterns[j]
-            prediction_input = np.reshape(pattern, (1, len(pattern), 1))
-            prediction_input = np.asarray(prediction_input).astype('float32')
-            prediction += model.predict(prediction_input, verbose=0)
+    # generate 100 notes
+    for note_index in range(start_seq,100):
+        # prediction = np.reshape(np.zeros(n_vocab), (1,n_vocab))
+        model = models[note_index]
+        print(note_index,pattern)
+        prediction_input = np.reshape(pattern, (1, len(pattern), 1))
+        prediction_input = np.asarray(prediction_input).astype('float32')
+        prediction = model.predict(prediction_input, verbose=0)
 
         # Predicted output is the argmax(P(h|D))
         index = np.argmax(prediction)
@@ -216,12 +214,10 @@ def generate_notes(models, network_inputs, pitchnames, n_vocab):
         # Storing the predicted output
         prediction_output.append(result)
 
-        for j in range(sequence_length):
-            patterns[j].append(index)
-            # Next input to the model
-            patterns[j] = patterns[j][1:len(patterns[j])]
+        # Next input to the model
+        pattern.append(index)
 
-    print('Notes Generated...')
+    print('Notes Generated...', prediction_output)
     return prediction_output
 
 def create_midi(prediction_output):
