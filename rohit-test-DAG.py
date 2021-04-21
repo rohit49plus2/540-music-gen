@@ -2,12 +2,13 @@ import os.path
 from glob import glob
 import pickle
 from music21 import converter, instrument, note, chord, stream
+from music21 import corpus
 import keras
 import numpy as np
 from keras.utils import np_utils
 import play
 
-sequence_length = 100
+sequence_length = 16
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -16,31 +17,37 @@ songs = glob('data/*.mid')
 print(songs)
 print('\n\n')
 
+# chorales = corpus.getBachChorales()
+# score  = corpus.parse(chorales[0])
+
 def get_notes():
     notes = []
     for file in songs:
-     # converting .mid file to stream object
-     midi = converter.parse(file)
-     notes_to_parse = []
-     try:
-       # Given a single stream, partition into a part for each unique instrument
-       parts = instrument.partitionByInstrument(midi)
-     except:
-       pass
-     if parts: # if parts has instrument parts
-       notes_to_parse = parts.parts[0].recurse()
-     else:
-       notes_to_parse = midi.flat.notes
-     for element in notes_to_parse:
-       if isinstance(element, note.Note):
-         # if element is a note, extract pitch
-         notes.append(str(element.pitch))
-       elif(isinstance(element, chord.Chord)):
-         # if element is a chord, append the normal form of the
-         # chord (a list of integers) to the list of notes.
-         notes.append('.'.join(str(n) for n in element.normalOrder))
+        # converting .mid file to stream object
+        midi = converter.parse(file)
+        notes_to_parse = []
+        try:
+            # Given a single stream, partition into a part for each unique instrument
+            parts = instrument.partitionByInstrument(midi)
+        except:
+            pass
+        if parts: # if parts has instrument parts
+            #1 for Format 0 midi files like mond_1.mid and 0 for Format 1 midi files
+            notes_to_parse = parts.parts[1].recurse()
+        else:
+            notes_to_parse = midi.flat.notes
+        for element in notes_to_parse:
+            # print(element)
+            if isinstance(element, note.Note):
+                # if element is a note, extract pitch
+                notes.append(str(element.pitch))
+            elif(isinstance(element, chord.Chord)):
+                # if element is a chord, append the normal form of the
+                # chord (a list of integers) to the list of notes.
+                notes.append('.'.join(str(n) for n in element.normalOrder))
+    print("notes",notes)
     with open('data/notes', 'wb') as filepath:
-     pickle.dump(notes, filepath)
+        pickle.dump(notes, filepath)
     return notes
 
 
@@ -140,9 +147,10 @@ def train_network(network_inputs, network_outputs):
     print('Training completed')
     return models
 
-training = True
-# training = False
+# training = True
+training = False
 you_have_processed_notes = True
+# you_have_processed_notes = False
 def generate():
     """ Generate a piano midi file """
     print('Loading Notes')
@@ -188,19 +196,21 @@ def generate_notes(models, network_inputs, pitchnames, n_vocab):
 
     start_seq = 0
     pattern=[]
-    # pick a random sequence from the input as a starting point for the prediction
-    network_input=network_inputs[start_seq]*float(n_vocab)
-    # Pick a random integer
-    start = np.random.randint(0, len(network_input)-1)
-    pattern = network_input[start].tolist()
+    network_input_0=network_inputs[start_seq]*float(n_vocab)
     prediction_output = []
 
     print('Generating notes........')
 
-    # generate 100 notes
-    for note_index in range(start_seq,100):
+    # generate n * sequence_length notes
+    n = 10
+    for note_index in range(start_seq,n*sequence_length):
         # prediction = np.reshape(np.zeros(n_vocab), (1,n_vocab))
-        model = models[note_index]
+        i = note_index%sequence_length
+        if i ==0:
+            # pick a random sequence from the input as a starting point for the prediction
+            start = np.random.randint(0, len(network_input_0)-1)
+            pattern = network_input_0[start].tolist()[0]
+        model = models[i]
         print(note_index,pattern)
         prediction_input = np.reshape(pattern, (1, len(pattern), 1))
         prediction_input = np.asarray(prediction_input).astype('float32')
