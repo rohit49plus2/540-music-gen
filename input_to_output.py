@@ -81,4 +81,4 @@ def create_midi(prediction_output):
     midi_stream.write('midi', fp=dir_path+'/test_output2.mid')
 
 
-create_midi(notes)
+create_midi(notes) #see what the network receives as an input

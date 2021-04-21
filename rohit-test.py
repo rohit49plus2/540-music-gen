@@ -158,13 +158,13 @@ def get_inputSequences(notes, pitchnames, n_vocab):
     # map between notes and integers and back
     note_to_int = dict((note, number) for number, note in enumerate(pitchnames))
 
-    sequence_length = 100
+    sequence_length = 4
     network_input = []
     for i in range(0, len(notes) - sequence_length, 1):
         sequence_in = notes[i:i + sequence_length]
         network_input.append([note_to_int[char] for char in sequence_in])
 
-    network_input = np.reshape(network_input, (len(network_input), 100, 1))
+    network_input = np.reshape(network_input, (len(network_input), 4, 1))
 
     return (network_input)
 
@@ -235,7 +235,7 @@ def create_midi(prediction_output):
 
     print('Saving Output file as midi....')
 
-    midi_stream.write('midi', fp=dir_path+'/test_output.mid')
+    midi_stream.write('midi', fp=dir_path+'/test_output3.mid')
 
 generate()
 
