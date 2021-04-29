@@ -207,11 +207,13 @@ def generate_notes(models, network_inputs, pitchnames, n_vocab):
         # prediction = np.reshape(np.zeros(n_vocab), (1,n_vocab))
         i = note_index%sequence_length
         if i ==0:
-            # pick a random sequence from the input as a starting point for the prediction
-            start = np.random.randint(0, len(network_input_0)-1)
-            pattern = network_input_0[start].tolist()[0]
+            if len(pattern)>0:
+                pattern = pattern[-1:]
+            else:
+                # pick a random sequence from the input as a starting point for the prediction
+                start = np.random.randint(0, len(network_input_0)-1)
+                pattern = network_input_0[start].tolist()[0]
         model = models[i]
-        print(note_index,pattern)
         prediction_input = np.reshape(pattern, (1, len(pattern), 1))
         prediction_input = np.asarray(prediction_input).astype('float32')
         prediction = model.predict(prediction_input, verbose=0)
@@ -226,6 +228,7 @@ def generate_notes(models, network_inputs, pitchnames, n_vocab):
 
         # Next input to the model
         pattern.append(index)
+        print(note_index,pattern)
 
     print('Notes Generated...', prediction_output)
     return prediction_output
@@ -263,6 +266,6 @@ def create_midi(prediction_output):
 
     print('Saving Output file as midi....')
 
-    midi_stream.write('midi', fp='test_output3.mid')
+    midi_stream.write('midi', fp='test_output5.mid')
 
 generate()
